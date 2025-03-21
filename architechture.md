@@ -20,13 +20,13 @@ The game uses a modular architecture to separate concerns and allow for clean, m
 - `main.js`: Game entry point and main loop, initializes all required components
 - `renderer.js`: Handles 3D rendering with ThreeJS, manages scene, camera, and visualization
 - `physics.js`: Manages physics simulation using CannonJS, handles physical objects and collision
-- `controls.js`: (Coming soon) Will handle player input from keyboard and touchscreen
+- `controls.js`: Manages user input, both keyboard for desktop and NippleJS for mobile
 - `ui.js`: (Coming soon) Will manage game UI elements and HUD
 
 #### External Libraries:
 - `three.module.js`: ThreeJS library for 3D rendering
 - `cannon.module.js`: Simplified implementation of CannonJS for physics simulation
-- `nipplejs.js`: (Coming soon) Will provide virtual joystick functionality
+- `nipplejs.min.js`: Library for creating virtual joysticks on touch devices
 
 ### Assets
 - **assets/**: Directory for game resources
@@ -75,3 +75,82 @@ The game uses a modular architecture to separate concerns and allow for clean, m
   - Dynamic bodies (player character, objects)
 - Collision detection and response
 - Synchronization between physics bodies and visual representations
+
+### Controls
+
+- Adaptive input system that detects device type (mobile vs desktop)
+- Desktop controls:
+  - WASD/Arrow keys for movement
+  - Spacebar for jump action
+  - Shift key for trick execution
+- Mobile touch controls using NippleJS:
+  - Dual joystick interface
+  - Left joystick for directional movement
+  - Right joystick for actions (jump and tricks)
+- Clean interface for querying input state from the game loop
+- Automatic control scheme switching based on device
+
+### Game Loop
+
+- Implements a professional game loop pattern with:
+  - Fixed time step updates for consistent physics simulation
+  - Separate processing phases for clean architecture
+  - Performance monitoring and FPS management
+  - Support for pausing and state management
+- Features frame-rate independence for consistent gameplay across devices
+- Handles both synchronous and asynchronous operations effectively
+- Provides robust error handling to prevent crashing
+
+### Dimensional Drift Mechanics
+
+- Multi-dimensional gameplay system that allows players to switch between parallel dimensions
+- Each dimension has unique:
+  - Physics properties (gravity, friction, etc.)
+  - Visual characteristics (colors, lighting, effects)
+  - Environmental behaviors
+- Core components:
+  - Dimension state management in the game state
+  - Physics property variations between dimensions
+  - Visual transition effects when shifting dimensions
+  - Dimension-specific interaction points (portals)
+- Provides gameplay variety and strategic depth through dimensional shifting
+
+### Asset Loading & 3D Models
+
+- Comprehensive asset management system:
+  - Queue-based loading for managing multiple assets
+  - Progress tracking with visual feedback (loading screen)
+  - Error handling with fallback mechanisms
+  - Asynchronous loading to prevent UI blocking
+  - Cache management for optimized performance
+
+- 3D Model Structure:
+  - Skate Park Environment:
+    - Constructed using THREE.js primitives in a component-based design
+    - Features various skateboarding elements (half-pipe, ramps, rails, funbox)
+    - Custom geometry for specialized skateboarding surfaces
+    - Optimized for performance with appropriate level of detail
+  
+  - Character Models:
+    - Modular skateboarder design with separate body components
+    - Skateboard model with detailed parts (deck, trucks, wheels)
+    - Animation system for character movements and tricks
+    - Dimension-specific visual variations
+  
+  - Visual Effects:
+    - Dimensional portal with animated effects
+    - Real-time shadows for enhanced visual quality
+    - Material system with physically-based rendering properties
+    - Dynamic lighting based on game state and actions
+
+- Animation Framework:
+  - Character animations for idle, movement, and tricks
+  - Environmental animations for interactive elements
+  - Procedural animations for dimension shifting effects
+  - Smooth transitions between animation states
+
+- Camera System:
+  - Third-person camera that intelligently follows the player
+  - Smooth transitions during movement and dimension shifts
+  - Adjustable perspectives based on game context
+  - Special camera behaviors during trick execution

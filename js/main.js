@@ -2,6 +2,7 @@
 
 import { Renderer } from './renderer.js';
 import Physics from './physics.js';
+import Controls from './controls.js';
 
 class Main {
     constructor() {
@@ -38,6 +39,10 @@ class Main {
             this.physics = new Physics();
             console.log('Physics initialized');
             
+            // Initialize controls
+            this.controls = new Controls();
+            console.log('Controls initialized');
+            
             // Create ground plane
             this.groundBody = this.physics.createGround();
             console.log('Ground created in physics world');
@@ -47,6 +52,10 @@ class Main {
                 { x: 1, y: 1, z: 1 }, // dimensions
                 { x: 0, y: 5, z: 0 }  // position
             );
+            // Initialize velocity
+            if (!this.testBox.velocity) {
+                this.testBox.velocity = { x: 0, y: 0, z: 0 };
+            }
             console.log('Test box created at y=5');
             
             // Make sure renderer has a reference to physics objects
@@ -112,6 +121,33 @@ class Main {
             const deltaTime = Math.min(0.1, currentTime - this.lastTime);
             this.lastTime = currentTime;
             
+            // Get current input state
+            const input = this.controls.getInputs();
+            
+            // Apply input to box - added console logging for debugging
+            const movementSpeed = 10; // Increase speed for better response
+            
+            if (input.left) {
+                this.testBox.position.x -= movementSpeed * deltaTime;
+                console.log('Moving left', this.testBox.position.x);
+            }
+            if (input.right) {
+                this.testBox.position.x += movementSpeed * deltaTime;
+                console.log('Moving right', this.testBox.position.x);
+            }
+            if (input.forward) {
+                this.testBox.position.z -= movementSpeed * deltaTime;
+                console.log('Moving forward', this.testBox.position.z);
+            }
+            if (input.backward) {
+                this.testBox.position.z += movementSpeed * deltaTime;
+                console.log('Moving backward', this.testBox.position.z);
+            }
+            if (input.jump && this.testBox.position.y < 0.6) {
+                this.testBox.velocity.y = 10; // Stronger jump
+                console.log('Jumping!');
+            }
+            
             // Update physics
             this.physics.update(deltaTime);
             
@@ -137,6 +173,12 @@ class Main {
             
             // Listen for window resize events
             window.addEventListener('resize', this.resizeCanvas.bind(this));
+            
+            // Log control instructions
+            console.log('CONTROLS:');
+            console.log('- WASD or Arrow Keys: Move the box');
+            console.log('- Spacebar: Jump');
+            
             console.log('Game started successfully');
         } catch (error) {
             console.error('Error starting game:', error);

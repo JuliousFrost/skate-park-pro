@@ -16,8 +16,8 @@
         
         #gameCanvas {
             display: block;
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+            height: 100vh;
             background-color: #87ceeb; /* Fallback sky blue */
         }
         
@@ -31,21 +31,134 @@
             border-radius: 5px;
             font-family: monospace;
             z-index: 100;
+            width: 80%;
+            max-width: 600px;
+            height: auto;
+            max-height: 80%;
+            overflow-y: auto;
+        }
+        
+        /* Touch controls styling */
+        #joystick-container {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            height: 150px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 1000;
+            pointer-events: none; /* Allow click-through except on joysticks */
+        }
+        
+        #movement-zone, #trick-zone {
+            width: 50%;
+            height: 100%;
+            pointer-events: auto; /* Enable interactivity on these elements */
+        }
+        
+        .loadingScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .loadingBar {
+            width: 300px;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+        
+        .loadingProgress {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(to right, #4CAF50, #8BC34A);
+            transition: width 0.3s;
         }
     </style>
 </head>
 <body>
-    <!-- Debug panel to confirm page is loading -->
+    <!-- Debug panel -->
     <div id="debugPanel">
         Debug Panel: Page loaded
         <div id="debugInfo">Waiting for initialization...</div>
     </div>
     
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loadingScreen">
+        <h2>Loading Skate Park Pro</h2>
+        <div class="loadingBar">
+            <div id="loadingProgress" class="loadingProgress"></div>
+        </div>
+        <p id="loadingStatus">Initializing...</p>
+    </div>
+    
     <canvas id="gameCanvas"></canvas>
     
-    <!-- Ultra-simplified direct rendering approach -->
+    <!-- Base libraries -->
     <script>
-        // Debug helper function
+        // Direct logging function
+        function logToPanel(message) {
+            console.log(message);
+            const debugElement = document.getElementById('debugInfo');
+            if (debugElement) {
+                debugElement.innerHTML += '<br>' + message;
+            }
+        }
+        
+        // Add error handler to catch and log module loading errors
+        window.addEventListener('error', function(event) {
+            logToPanel('ERROR: ' + event.message + ' at ' + event.filename + ':' + event.lineno);
+        });
+    </script>
+    
+    <!-- Libraries -->
+    <script src="js/lib/nipplejs.min.js"></script>
+    
+    <!-- Fall back to CDN version of Three.js if local fails -->
+    <script>
+        // Check if local files exist
+        logToPanel('Checking library files...');
+        
+        // First try loading three.js from CDN just to have it available
+        const threeScript = document.createElement('script');
+        threeScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+        threeScript.onload = function() {
+            logToPanel('✓ THREE.js loaded from CDN');
+            
+            // Now try loading our game module
+            const gameScript = document.createElement('script');
+            gameScript.type = 'module';
+            gameScript.src = 'js/main.js';
+            gameScript.onload = function() {
+                logToPanel('✓ Main game module loaded');
+            };
+            gameScript.onerror = function(e) {
+                logToPanel('✗ Error loading main game module: ' + e.type);
+            };
+            document.body.appendChild(gameScript);
+        };
+        threeScript.onerror = function() {
+            logToPanel('✗ Could not load THREE.js from CDN');
+        };
+        document.body.appendChild(threeScript);
+    </script>
+    
+    <!-- Simple debug logger -->
+    <script>
+        // Log to both console and debug panel
         function debugLog(message) {
             console.log(message);
             const debugElement = document.getElementById('debugInfo');
@@ -54,127 +167,36 @@
             }
         }
         
-        debugLog('Script starting...');
-        
-        // Create a simple scene directly
-        function initScene() {
-            try {
-                debugLog('Initializing scene...');
+        // Wait a moment to check if game loaded correctly
+        setTimeout(() => {
+            if (typeof window.game === 'undefined') {
+                debugLog('ERROR: Game object not found on window. Check console for errors.');
                 
-                // Get canvas
-                const canvas = document.getElementById('gameCanvas');
-                if (!canvas) {
-                    throw new Error('Canvas not found');
-                }
-                debugLog('Canvas found');
-                
-                // Basic scene setup with vanilla JavaScript
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
-                
-                // Simple 2D fallback rendering using canvas context
-                const ctx = canvas.getContext('2d');
-                if (!ctx) {
-                    throw new Error('Could not get canvas context');
-                }
-                debugLog('Got 2D context');
-                
-                // Fill with color
-                ctx.fillStyle = 'skyblue';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                // Draw ground
-                ctx.fillStyle = 'gray';
-                ctx.fillRect(0, canvas.height * 0.7, canvas.width, canvas.height * 0.3);
-                
-                // Draw a green cube
-                ctx.fillStyle = 'green';
-                ctx.fillRect(canvas.width / 2 - 50, canvas.height / 2 - 50, 100, 100);
-                
-                debugLog('2D rendering complete');
-                
-                // Try to load THREE.js dynamically
-                const threeScript = document.createElement('script');
-                threeScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
-                threeScript.onload = initThree;
-                threeScript.onerror = (e) => {
-                    debugLog('Error loading THREE.js from CDN: ' + e);
-                    debugLog('Using 2D fallback renderer');
-                };
-                document.body.appendChild(threeScript);
-                
-                debugLog('THREE.js script added');
-            } catch (error) {
-                debugLog('Error initializing: ' + error.message);
+                // Check if main.js was loaded
+                const script = document.createElement('script');
+                script.onload = () => debugLog('main.js file exists but may have errors');
+                script.onerror = () => debugLog('main.js file not found or inaccessible');
+                script.src = 'js/main.js';
+                document.head.appendChild(script);
+            } else {
+                debugLog('Game object loaded successfully');
+                debugLog('Controls: Use WASD/Arrows and Spacebar');
             }
-        }
-        
-        // Initialize THREE.js if available
-        function initThree() {
-            try {
-                debugLog('THREE.js loaded, initializing 3D scene...');
-                
-                const canvas = document.getElementById('gameCanvas');
-                
-                // Basic THREE.js setup
-                const scene = new THREE.Scene();
-                const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-                
-                const renderer = new THREE.WebGLRenderer({
-                    canvas: canvas,
-                    antialias: true
-                });
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                renderer.setClearColor(0x87ceeb); // Sky blue
-                
-                debugLog('THREE.js renderer initialized');
-                
-                // Add a simple cube
-                const geometry = new THREE.BoxGeometry(1, 1, 1);
-                const material = new THREE.MeshBasicMaterial({color: 0x00ff00});
-                const cube = new THREE.Mesh(geometry, material);
-                scene.add(cube);
-                
-                // Add a ground plane
-                const planeGeometry = new THREE.PlaneGeometry(10, 10);
-                const planeMaterial = new THREE.MeshBasicMaterial({
-                    color: 0x808080,
-                    side: THREE.DoubleSide
-                });
-                const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-                plane.rotation.x = Math.PI / 2;
-                plane.position.y = -2;
-                scene.add(plane);
-                
-                // Position camera
-                camera.position.z = 5;
-                
-                debugLog('3D objects added to scene');
-                
-                // Animation function
-                function animate() {
-                    requestAnimationFrame(animate);
-                    
-                    // Rotate the cube
-                    cube.rotation.x += 0.01;
-                    cube.rotation.y += 0.01;
-                    
-                    renderer.render(scene, camera);
-                }
-                
-                animate();
-                debugLog('Animation loop started');
-                
-            } catch (error) {
-                debugLog('THREE.js Error: ' + error.message);
-            }
-        }
-        
-        // Start everything
-        window.onload = function() {
-            debugLog('Window loaded, starting initialization');
-            initScene();
-        };
+        }, 3000); // Longer timeout to ensure loading completes
     </script>
+    
+    <!-- Custom Models & Asset Loading -->
+    <script src="GLTFLoader.js"></script>
+    <script src="asset-loader.js"></script>
+    <script src="skate-park-model.js"></script>
+    <script src="skateboarder-model.js"></script>
+    <!-- Fallback game (non-module) -->
+    <script src="fallback-game.js"></script>
+    
+    <!-- Test Scripts -->
+    <script src="test-controls.js"></script>
+    <script src="test-step5.js"></script>
+    <script src="test-step6.js"></script>
+    <script src="test-step7.js"></script>
 </body>
 </html> 

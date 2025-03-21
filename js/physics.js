@@ -71,6 +71,12 @@ class Physics {
             dimensions.z / 2
         )));
         
+        // Initialize velocity
+        boxBody.velocity = new CANNON.Vec3(0, 0, 0);
+        
+        // Allow manual position/velocity updates
+        boxBody.allowManualUpdate = true;
+        
         // Add the box to the world
         this.world.addBody(boxBody);
         
@@ -90,6 +96,9 @@ class Physics {
         
         // Add a sphere shape
         sphereBody.addShape(new CANNON.Sphere(radius));
+        
+        // Initialize velocity
+        sphereBody.velocity = new CANNON.Vec3(0, 0, 0);
         
         // Add the sphere to the world
         this.world.addBody(sphereBody);
