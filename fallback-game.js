@@ -56,12 +56,23 @@ window.addEventListener('load', function() {
             frameCount: 0,
             lastFpsUpdate: 0,
             physicsTime: 0,
-            renderTime: 0
+            renderTime: 0,
+            // Gameplay stats
+            combo: 1,
+            lastTrickTime: 0,
+            inAir: false,
+            jumpHeight: 0,
+            maxJumpHeight: 0
         }
     };
     
     // Make game globally accessible
     window.fallbackGame = game;
+
+    // Toggle dimension method for external use
+    game.toggleDimension = function() {
+        switchDimension();
+    };
     
     // Initialize THREE.js
     function initThree() {
@@ -227,6 +238,11 @@ window.addEventListener('load', function() {
                 }, 500);
             }
             
+            // Initialize UI after models are loaded
+            if (window.uiManager && !uiManager.initialized) {
+                uiManager.init();
+            }
+            
         } catch (error) {
             console.error('Error loading models:', error);
             updateDebugPanel('Error loading 3D models. Using placeholder objects instead.');
@@ -256,6 +272,12 @@ window.addEventListener('load', function() {
                     break;
                 case ' ': // Spacebar
                     game.input.jump = true;
+                    // Track jump state for tricks
+                    if (!game.state.inAir) {
+                        game.state.inAir = true;
+                        game.state.jumpHeight = 0;
+                        game.state.maxJumpHeight = 0;
+                    }
                     // Trigger jump on skateboarder if loaded
                     if (game.objects.skateboarder && typeof game.objects.skateboarder.jump === 'function') {
                         game.objects.skateboarder.jump();
@@ -268,8 +290,7 @@ window.addEventListener('load', function() {
                     }
                     break;
                 case 'p': // P key to pause
-                    game.state.paused = !game.state.paused;
-                    updateDebugInfo();
+                    togglePause();
                     break;
             }
         });
@@ -304,6 +325,22 @@ window.addEventListener('load', function() {
         console.log('Keyboard controls initialized in fallback mode');
     }
     
+    // Toggle pause state
+    function togglePause() {
+        game.state.paused = !game.state.paused;
+        
+        // Update UI
+        if (window.uiManager) {
+            if (game.state.paused) {
+                uiManager.pauseGame();
+            } else {
+                uiManager.resumeGame();
+            }
+        }
+        
+        updateDebugInfo();
+    }
+    
     // Switch between dimensions
     function switchDimension() {
         // Toggle dimension
@@ -329,6 +366,13 @@ window.addEventListener('load', function() {
             }, 300);
         }
         
+        // Update UI
+        if (window.uiManager) {
+            uiManager.updateDimensionIndicator(game.state.currentDimension);
+            // Award points for dimension shifting
+            uiManager.addScore(25);
+        }
+        
         console.log(`Switched to ${dimension.name} dimension`);
         updateDebugInfo();
     }
@@ -344,6 +388,23 @@ window.addEventListener('load', function() {
         if (game.objects.skateboarder) {
             // Pass the input state to the skateboarder for animation
             game.objects.skateboarder.update(deltaTime, game.input);
+            
+            // Track jump height for trick detection
+            const skateboarderY = game.objects.skateboarder.getGroup().position.y;
+            if (game.state.inAir) {
+                game.state.jumpHeight = skateboarderY;
+                // Update max height reached
+                if (skateboarderY > game.state.maxJumpHeight) {
+                    game.state.maxJumpHeight = skateboarderY;
+                }
+                
+                // Check if landed
+                if (skateboarderY <= 0.1 && game.state.maxJumpHeight > 0.5) {
+                    detectTrick(game.state.maxJumpHeight);
+                    game.state.inAir = false;
+                    game.state.maxJumpHeight = 0;
+                }
+            }
         } else if (game.objects.box) {
             // Fallback to updating the placeholder box
             updateBoxPhysics(deltaTime, dimension);
@@ -357,7 +418,64 @@ window.addEventListener('load', function() {
         // Check portal interaction
         updatePortalInteraction(deltaTime);
         
+        // Check for combo timeout
+        if (performance.now() - game.state.lastTrickTime > 5000 && game.state.combo > 1) {
+            // Reset combo if no tricks in last 5 seconds
+            game.state.combo = 1;
+        }
+        
         game.state.physicsTime = performance.now() - startTime;
+    }
+    
+    // Detect and score tricks based on jump height and movement
+    function detectTrick(jumpHeight) {
+        let trickName = '';
+        let points = 0;
+        
+        if (window.uiManager) {
+            // Different tricks based on height and dimension
+            if (game.state.currentDimension === 0) { // Normal dimension
+                if (jumpHeight > 3) {
+                    trickName = 'MEGA FLIP';
+                    points = 500;
+                } else if (jumpHeight > 2) {
+                    trickName = '360 FLIP';
+                    points = 300;
+                } else if (jumpHeight > 1) {
+                    trickName = 'OLLIE';
+                    points = 100;
+                }
+            } else { // Low gravity dimension
+                if (jumpHeight > 6) {
+                    trickName = 'COSMIC SPIN';
+                    points = 800;
+                } else if (jumpHeight > 4) {
+                    trickName = 'ZERO-G FLIP';
+                    points = 500;
+                } else if (jumpHeight > 2) {
+                    trickName = 'SPACE OLLIE';
+                    points = 200;
+                }
+            }
+            
+            if (points > 0) {
+                // Combo system
+                const comboPoints = points * game.state.combo;
+                
+                // Show trick notification
+                uiManager.showTrickNotification(trickName, comboPoints);
+                
+                // Add points
+                uiManager.addScore(comboPoints);
+                
+                // Update combo
+                game.state.combo++;
+                uiManager.showCombo(game.state.combo);
+                
+                // Update last trick time for combo timeout
+                game.state.lastTrickTime = performance.now();
+            }
+        }
     }
     
     // Update the placeholder box (used when skateboarder model isn't loaded)
@@ -374,12 +492,35 @@ window.addEventListener('load', function() {
         if (game.input.jump && box.position.y <= 0.5) {
             box.position.y += 0.2; // Initial jump impulse
             box.velocity = 5; // Upward velocity
+            
+            // Track jump state for tricks
+            if (!game.state.inAir) {
+                game.state.inAir = true;
+                game.state.jumpHeight = 0;
+                game.state.maxJumpHeight = 0;
+            }
         }
         
         // Apply velocity
         if (box.velocity > 0) {
             box.position.y += box.velocity * deltaTime;
             box.velocity -= dimension.gravity * deltaTime; // Dimension-specific gravity
+            
+            // Track jump height for trick detection
+            if (game.state.inAir) {
+                game.state.jumpHeight = box.position.y;
+                // Update max height reached
+                if (box.position.y > game.state.maxJumpHeight) {
+                    game.state.maxJumpHeight = box.position.y;
+                }
+            }
+        }
+        
+        // Check if landed
+        if (game.state.inAir && box.position.y <= 0.5 && game.state.maxJumpHeight > 0.5) {
+            detectTrick(game.state.maxJumpHeight);
+            game.state.inAir = false;
+            game.state.maxJumpHeight = 0;
         }
     }
     
@@ -577,6 +718,13 @@ window.addEventListener('load', function() {
             statusMsg += `- Spacebar: Jump<br>`;
             statusMsg += `- Q: Shift dimension<br>`;
             statusMsg += `- P: Pause/Resume<br>`;
+            
+            if (window.uiManager) {
+                statusMsg += `<br><b>Game Stats:</b><br>`;
+                statusMsg += `- Score: ${uiManager.score}<br>`;
+                statusMsg += `- Combo: x${game.state.combo}<br>`;
+                statusMsg += `- Tricks: ${uiManager.tricks}<br>`;
+            }
             
             // Player position
             const playerObject = game.objects.skateboarder ? 

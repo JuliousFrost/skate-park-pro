@@ -154,3 +154,44 @@ The game uses a modular architecture to separate concerns and allow for clean, m
   - Smooth transitions during movement and dimension shifts
   - Adjustable perspectives based on game context
   - Special camera behaviors during trick execution
+
+### User Interface System
+
+- Layered UI Architecture:
+  - UI container positioned above the game canvas
+  - Separation of in-game HUD elements and menu screens
+  - DOM-based elements for optimal performance and accessibility
+  - Responsive design that adapts to different screen sizes and orientations
+
+- Game Menu System:
+  - Main menu with game title and navigation options
+  - Pause menu with resume and exit functionality
+  - Game over screen with final score and retry options
+  - Controls screen with input instructions
+  - Consistent visual styling across all menus
+
+- HUD Components:
+  - Score display with real-time updates
+  - Combo meter for tracking consecutive tricks
+  - Dimension indicator showing current game dimension
+  - Trick notification system for immediate feedback
+  - Pause button for mobile accessibility
+
+- Gameplay Feedback:
+  - Visual notifications for completed tricks
+  - Score animations for point accumulation
+  - Dimension shift indicators with color cues
+  - Combo multiplier display with timeout visualization
+
+- State Management:
+  - Centralized game state tracking (menu, playing, paused, game over)
+  - Event-based communication between UI and game systems
+  - Smooth transitions between different game states
+  - Persistent scoring and statistics
+
+- Visual Design:
+  - Cyberpunk-inspired color scheme with neon accents
+  - Semi-transparent backgrounds for unobtrusive overlays
+  - Consistent typography and button styling
+  - Interactive elements with hover and click effects
+  - Animated transitions for enhanced user experience
